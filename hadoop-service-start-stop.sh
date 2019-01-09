@@ -1,9 +1,10 @@
 #!/bin/bash
 #################################################################################
 #Purpose : Script will stop and start hortonworks hadoops services using ambari #
-# Intial Development by :  Kamal Maiti                                          #
-# Maintained By : Kamal Maiti                                                   #
-#Change log :                                                                   #
+# Intial Development by :  manoj.babu.malapati                                  #
+# Improvment By : kamal.maiti                                                   #
+# Maintained By : DIS DEVOPS Team.                                              #
+#Change log :                                                                   #                                                                #
 #################################################################################
 
 #Take in put from CLI : amabari host,port, ambari admin username and password, cluster name.
@@ -16,7 +17,7 @@ PORT=8080
 #Take some global variable
 declare -a NODELIST
 declare -a ALLSERVICES
-
+MASTERNODE="dummy"
 usage(){             #Help function to provide details on how to use this script
 cat << EOF
 options :
@@ -111,6 +112,14 @@ check_services(){
 
 start_services_on_node() {
  get_all_nodes
+j=0;
+for NODE in "${NODELIST[@]}"
+ do
+  if  egrep -q "edge|master|hname1" <<<$NODE; then
+   MASTERNODE=$NODE
+  fi
+done
+
  start_services_on_master
  sleep 600
  j=0;
@@ -130,6 +139,8 @@ stop_services_on_node() {
   do
    if ! egrep -q "edge|master|hname1" <<<$NODE; then
     stop $NODE
+   else
+   MASTERNODE=$NODE
    fi;
    j=$(( j + 1 ))
   done
@@ -141,22 +152,22 @@ start() {
 
 HOST_NAME=$1
 #echo "GOT: $HOST_NAME"
-curl --silent -u ${ADMINUSER}:${ADMINPW} -H "X-Requested-By: ambari" -X PUT -d '{"RequestInfo":{"context":"Start All Host Compnents","operation_level": {"level":"HOST","cluster_name":"${CLUSTER}", "host_names":"$HOST_NAME"},"query":"HostRoles/component_name/*"}, "Body": {"HostRoles": {"state":"STARTED"}}}' http://${AMBARIHOST}:${PORT}/api/v1/clusters/${CLUSTER}/hosts/${HOST_NAME}/host_components;
+curl --silent -u ${ADMINUSER}:${ADMINPW} -H "X-Requested-By: ambari" -X PUT -d '{"RequestInfo":{"context":"Start All Host Compnents","operation_level": {"level":"HOST","cluster_name":"'${CLUSTER}'", "host_names":"'${HOST_NAME}'"},"query":"HostRoles/component_name/*"}, "Body": {"HostRoles": {"state":"STARTED"}}}' http://${AMBARIHOST}:${PORT}/api/v1/clusters/${CLUSTER}/hosts/${HOST_NAME}/host_components
 
 }
 
 stop() {
 HOST_NAME=$1
 #echo "GOT: $HOST_NAME"
-curl --silent -u ${ADMINUSER}:${ADMINPW}  -H "X-Requested-By: ambari" -X PUT -d '{"RequestInfo":{"context":"Stopping All Host Components","operation_level": {"level":"HOST","cluster_name":"${CLUSTER}", "host_names":"$HOST_NAME"},"query":"HostRoles/component_name/*"}, "Body": {"HostRoles": {"state":"INSTALLED"}}}' http://${AMBARIHOST}:${PORT}/api/v1/clusters/${CLUSTER}/hosts/${HOST_NAME}/host_components;
+curl --silent -u ${ADMINUSER}:${ADMINPW}  -H "X-Requested-By: ambari" -X PUT -d '{"RequestInfo":{"context":"Stopping All Host Components","operation_level": {"level":"HOST","cluster_name":"'${CLUSTER}'", "host_names":"'${HOST_NAME}'"},"query":"HostRoles/component_name/*"}, "Body": {"HostRoles": {"state":"INSTALLED"}}}' http://${AMBARIHOST}:${PORT}/api/v1/clusters/${CLUSTER}/hosts/${HOST_NAME}/host_components
 
 }
 
 start_services_on_master() {
-start $AMBARIHOST
+start $MASTERNODE
 }
 stop_services_on_master() {
-stop $AMBARIHOST
+stop $MASTERNODE
 }
 
 
